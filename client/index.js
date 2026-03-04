@@ -18,6 +18,27 @@ const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 const mcpHost = process.env.MCP_HOST ?? "127.0.0.1";
 const mcpPort = process.env.MCP_PORT ?? "3001";
 const mcpUrl = `http://${mcpHost}:${mcpPort}/sse`;
+const authMode = (process.env.AUTH_MODE ?? "none").toLowerCase();
+const mcpApiKeyHeader = process.env.MCP_API_KEY_HEADER ?? "x-api-key";
+const mcpApiKey = process.env.MCP_API_KEY;
+const mcpJwtToken = process.env.MCP_JWT_TOKEN;
+
+const requestHeaders = {};
+if (authMode === "apikey") {
+    if (!mcpApiKey) {
+        console.error("AUTH_MODE=apikey requires MCP_API_KEY in .env");
+        process.exit(1);
+    }
+    requestHeaders[mcpApiKeyHeader] = mcpApiKey;
+}
+
+if (authMode === "jwt") {
+    if (!mcpJwtToken) {
+        console.error("AUTH_MODE=jwt requires MCP_JWT_TOKEN in .env");
+        process.exit(1);
+    }
+    requestHeaders.Authorization = `Bearer ${mcpJwtToken}`;
+}
 
 const mcpClient = new Client({
     name: "example-client",
@@ -44,7 +65,13 @@ function getFriendlyModelError(error) {
 }
 
 
-mcpClient.connect(new SSEClientTransport(new URL(mcpUrl)))
+mcpClient.connect(
+    new SSEClientTransport(new URL(mcpUrl), {
+        requestInit: {
+            headers: requestHeaders,
+        },
+    }),
+)
     .then(async () => {
 
         console.log("Connected to mcp server")
