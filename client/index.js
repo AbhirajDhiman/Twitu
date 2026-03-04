@@ -32,6 +32,17 @@ const rl = readline.createInterface({
     output: process.stdout,
 });
 
+function getFriendlyModelError(error) {
+    const status = error?.status;
+    const rawMessage = typeof error?.message === "string" ? error.message : "Unknown model error";
+
+    if (status === 429 || /RESOURCE_EXHAUSTED|quota exceeded/i.test(rawMessage)) {
+        return "Gemini quota exceeded (HTTP 429). Check API billing/quota, then retry. The app is still running.";
+    }
+
+    return `Model request failed: ${rawMessage}`;
+}
+
 
 mcpClient.connect(new SSEClientTransport(new URL(mcpUrl)))
     .then(async () => {
@@ -75,16 +86,24 @@ async function chatLoop(toolCall) {
             ]
         })
 
-        const toolResult = await mcpClient.callTool({
-            name: toolCall.name,
-            arguments: toolCall.args
-        })
+        let toolResult;
+        try {
+            toolResult = await mcpClient.callTool({
+                name: toolCall.name,
+                arguments: toolCall.args
+            })
+        } catch (error) {
+            console.error("Tool call failed:", error?.message ?? "unknown_error");
+            return chatLoop();
+        }
+
+        const toolText = toolResult?.content?.[0]?.text ?? "(No tool output)";
 
         chatHistory.push({
             role: "user",
             parts: [
                 {
-                    text: "Tool result : " + toolResult.content[ 0 ].text,
+                    text: "Tool result : " + toolText,
                     type: "text"
                 }
             ]
@@ -111,17 +130,23 @@ async function chatLoop(toolCall) {
         })
     }
 
-    const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: chatHistory,
-        config: {
-            tools: [
-                {
-                    functionDeclarations: tools,
-                }
-            ]
-        }
-    })
+    let response;
+    try {
+        response = await ai.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: chatHistory,
+            config: {
+                tools: [
+                    {
+                        functionDeclarations: tools,
+                    }
+                ]
+            }
+        })
+    } catch (error) {
+        console.error(getFriendlyModelError(error));
+        return chatLoop();
+    }
     const firstCandidate = response?.candidates?.[0];
     const firstPart = firstCandidate?.content?.parts?.[0] ?? {};
     const functionCall = firstPart.functionCall
