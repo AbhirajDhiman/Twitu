@@ -18,28 +18,30 @@ const twitterAppSecret = getFirstEnvValue(["TWITTER_CONSUMER_KEY_SECRET", "TWITT
 const twitterAccessToken = process.env.TWITTER_ACCESS_TOKEN;
 const twitterAccessSecret = process.env.TWITTER_ACCESS_TOKEN_SECRET;
 
-if (!twitterAppKey) {
-    throw new Error("Missing TWITTER_CONSUMER_KEY (or TWITTER_API_KEY) in environment");
-}
+function getTwitterClient() {
+    if (!twitterAppKey) {
+        throw new Error("Missing TWITTER_CONSUMER_KEY (or TWITTER_API_KEY) in environment");
+    }
 
-if (!twitterAppSecret) {
-    throw new Error("Missing TWITTER_CONSUMER_KEY_SECRET (or TWITTER_API_SECRET) in environment");
-}
+    if (!twitterAppSecret) {
+        throw new Error("Missing TWITTER_CONSUMER_KEY_SECRET (or TWITTER_API_SECRET) in environment");
+    }
 
-if (!twitterAccessToken) {
-    throw new Error("Missing TWITTER_ACCESS_TOKEN in environment");
-}
+    if (!twitterAccessToken) {
+        throw new Error("Missing TWITTER_ACCESS_TOKEN in environment");
+    }
 
-if (!twitterAccessSecret) {
-    throw new Error("Missing TWITTER_ACCESS_TOKEN_SECRET in environment");
-}
+    if (!twitterAccessSecret) {
+        throw new Error("Missing TWITTER_ACCESS_TOKEN_SECRET in environment");
+    }
 
-const twitterClient = new TwitterApi({
-    appKey: twitterAppKey,
-    appSecret: twitterAppSecret,
-    accessToken: twitterAccessToken,
-    accessSecret: twitterAccessSecret
-})
+    return new TwitterApi({
+        appKey: twitterAppKey,
+        appSecret: twitterAppSecret,
+        accessToken: twitterAccessToken,
+        accessSecret: twitterAccessSecret
+    });
+}
 
 export async function createPost(status) {
     const normalizedStatus = typeof status === "string" ? status.replace(/\s+/g, " ").trim() : "";
@@ -69,6 +71,7 @@ export async function createPost(status) {
     }
 
     try {
+        const twitterClient = getTwitterClient();
         const newPost = await twitterClient.v2.tweet(normalizedStatus)
         return {
             content: [

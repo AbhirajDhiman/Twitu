@@ -56,19 +56,16 @@ if (!Number.isInteger(rateLimitMax) || rateLimitMax < 1) {
 const app = express();
 const transports = new Map();
 let isShuttingDown = false;
+const explicitAllowedHosts = (process.env.MCP_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 
 if (typeof trustProxy === "string" && trustProxy.trim() !== "") {
     app.set("trust proxy", trustProxy.trim());
 }
 
-const allowedHosts = Array.from(
-    new Set([
-        `${host}:${port}`,
-        `localhost:${port}`,
-        `127.0.0.1:${port}`,
-        `[::1]:${port}`,
-    ]),
-);
+const allowedHosts = explicitAllowedHosts.length > 0 ? explicitAllowedHosts : undefined;
 
 const server = new McpServer({
     name: "twitterpost-agent-mcp-server",
