@@ -145,6 +145,14 @@ app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", uptimeSec: Math.floor(process.uptime()) });
 });
 
+app.get("/", (_req, res) => {
+    res.status(200).json({
+        service: "twitu-mcp-server",
+        status: "ok",
+        endpoints: ["/health", "/ready", "/sse", "/messages"],
+    });
+});
+
 app.get("/ready", (_req, res) => {
     if (isShuttingDown) {
         res.status(503).json({ status: "shutting_down" });
@@ -235,6 +243,9 @@ const httpServer = app.listen(port, host, (error) => {
 
     console.log(`MCP server is running on http://${host}:${port}`);
     console.log(`SSE endpoint: http://${host}:${port}/sse`);
+    console.log(`Auth mode: ${authMode}`);
+    console.log(`Resolved PORT env: ${process.env.PORT ?? "(not set)"}`);
+    console.log(`Resolved MCP_PORT env: ${process.env.MCP_PORT ?? "(not set)"}`);
 });
 
 async function shutdown(signal) {
