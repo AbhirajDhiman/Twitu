@@ -1,0 +1,19 @@
+{
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "start:client": "node client/index.js",
+    "start:server": "node server/index.js",
+    "mcp:start": "node server/index.js",
+    "mcp:dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.43.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "dotenv": "^17.3.1",
+    "express": "^5.1.0",
+    "twitter-api-v2": "^1.29.0",
+    "zod": "^3.24.2"
+  }
+}
