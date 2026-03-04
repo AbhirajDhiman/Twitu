@@ -32,8 +32,8 @@ if (authMode === "jwt" && !jwtSecret) {
     process.exit(1);
 }
 
-const host = process.env.MCP_HOST ?? "127.0.0.1";
-const port = Number(process.env.MCP_PORT ?? 3001);
+const host = process.env.MCP_HOST ?? "0.0.0.0";
+const port = Number(process.env.PORT ?? process.env.MCP_PORT ?? 3001);
 const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);
 const rateLimitMax = Number(process.env.RATE_LIMIT_MAX_REQUESTS ?? 120);
 const trustProxy = process.env.TRUST_PROXY;
