@@ -1,6 +1,6 @@
 import { config } from "dotenv"
 import { TwitterApi } from "twitter-api-v2"
-config();
+config({ override: true });
 
 function getFirstEnvValue(names) {
     for (const name of names) {

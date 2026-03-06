@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createPost } from "./mcp.tool.js";
 import { randomUUID } from "node:crypto";
 
-config();
+config({ override: true });
 
 const authMode = (process.env.AUTH_MODE ?? "none").toLowerCase();
 const apiKeyHeader = (process.env.MCP_API_KEY_HEADER ?? "x-api-key").toLowerCase();

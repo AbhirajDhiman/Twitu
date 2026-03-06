@@ -5,7 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 
 
-config()
+config({ override: true })
 let tools = []
 const geminiApiKey = process.env.GEMINI_API_KEY;
 
@@ -15,6 +15,60 @@ if (!geminiApiKey) {
 }
 
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+const preferredModel = (process.env.GEMINI_MODEL ?? "gemini-2.0-flash").trim();
+const fallbackModels = (process.env.GEMINI_FALLBACK_MODELS ?? "gemini-2.0-flash-001,gemini-2.0-flash-lite,gemini-flash-latest")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+function isQuotaError(error) {
+    const status = error?.status;
+    const rawMessage = typeof error?.message === "string" ? error.message : "";
+    return status === 429 || /RESOURCE_EXHAUSTED|quota exceeded/i.test(rawMessage);
+}
+
+function isModelNotFoundError(error) {
+    const status = error?.status;
+    const rawMessage = typeof error?.message === "string" ? error.message : "";
+    return status === 404 || /not found for API version|is not supported for generateContent/i.test(rawMessage);
+}
+
+async function generateModelResponse({ contents, tools }) {
+    const modelsToTry = [preferredModel, ...fallbackModels].filter(
+        (model, index, array) => model && array.indexOf(model) === index,
+    );
+    let lastError;
+
+    for (const modelName of modelsToTry) {
+        try {
+            return await ai.models.generateContent({
+                model: modelName,
+                contents,
+                config: {
+                    tools: [
+                        {
+                            functionDeclarations: tools,
+                        }
+                    ]
+                }
+            });
+        } catch (error) {
+            lastError = error;
+            if (!isQuotaError(error) && !isModelNotFoundError(error)) {
+                throw error;
+            }
+
+            if (isModelNotFoundError(error)) {
+                console.warn(`Model ${modelName} is unavailable for this API key/project. Trying next model...`);
+                continue;
+            }
+
+            console.warn(`Model ${modelName} hit quota limits. Trying next available model...`);
+        }
+    }
+
+    throw lastError;
+}
 const mcpHost = process.env.MCP_HOST ?? "127.0.0.1";
 const mcpPort = process.env.MCP_PORT ?? "3001";
 const mcpUrl = `http://${mcpHost}:${mcpPort}/sse`;
@@ -159,16 +213,9 @@ async function chatLoop(toolCall) {
 
     let response;
     try {
-        response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+        response = await generateModelResponse({
             contents: chatHistory,
-            config: {
-                tools: [
-                    {
-                        functionDeclarations: tools,
-                    }
-                ]
-            }
+            tools,
         })
     } catch (error) {
         console.error(getFriendlyModelError(error));
