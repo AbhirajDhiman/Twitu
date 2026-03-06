@@ -32,8 +32,11 @@ if (authMode === "jwt" && !jwtSecret) {
     process.exit(1);
 }
 
-const host = process.env.MCP_HOST ?? "0.0.0.0";
 const port = Number(process.env.PORT ?? process.env.MCP_PORT ?? 3001);
+const configuredHost = (process.env.MCP_HOST ?? "").trim();
+const host = process.env.PORT
+    ? "0.0.0.0"
+    : configuredHost || "0.0.0.0";
 const rateLimitWindowMs = Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000);
 const rateLimitMax = Number(process.env.RATE_LIMIT_MAX_REQUESTS ?? 120);
 const trustProxy = process.env.TRUST_PROXY;
@@ -241,6 +244,9 @@ const httpServer = app.listen(port, host, (error) => {
     console.log(`MCP server is running on http://${host}:${port}`);
     console.log(`SSE endpoint: http://${host}:${port}/sse`);
     console.log(`Auth mode: ${authMode}`);
+    if (process.env.PORT && configuredHost && configuredHost !== "0.0.0.0") {
+        console.warn(`MCP_HOST=${configuredHost} ignored because PORT is set (cloud mode). Using 0.0.0.0.`);
+    }
     console.log(`Resolved PORT env: ${process.env.PORT ?? "(not set)"}`);
     console.log(`Resolved MCP_PORT env: ${process.env.MCP_PORT ?? "(not set)"}`);
 });
